@@ -1,28 +1,62 @@
-This is a university project and must be take as "it is". 
-This project uses a uC with an RTOS functionality. 
+This is a university project. 
+This project uses a PIC32MZ uC with an RTOS functionality. 
 
 
 The project is split in two parts: 
 a simple 'blinky' style starter project
 a more comprehensive test and demo application.
 
- main_blinky() creates one queue, two tasks, and one software timer.  It then starts the scheduler.
+=====================================================================================================
+main_blinky() creates one queue, two tasks, and one software timer.  It then starts the scheduler.
+
+The Blinky Software Timer:
+--------------------------
+This demonstrates an auto-reload software timer.  The timer callback function does nothing but toggle an LED.
+
+The Queue Send Task:
+--------------------------
+The queue send task is implemented by the prvQueueSendTask() function in this file.  prvQueueSendTask() sits in a loop that causes it to repeatedly
+block for 200 milliseconds, before sending the value 100 to the queue that was created within main_blinky().  Once the value is sent, the task loops
+back around to block for another 200 milliseconds. 
+The Queue Receive Task:
+--------------------------
+The queue receive task is implemented by the prvQueueReceiveTask() function in this file.  prvQueueReceiveTask() sits in a loop where it repeatedly
+blocks on attempts to read data from the queue that was created within main_blinky().  When data is received, the task checks the value of the
+data, and if the value equals the expected 100, toggles the LED.  The 'block time' parameter passed to the queue receive function specifies that the
+task should be held in the Blocked state indefinitely to wait for data to be available on the queue.  The queue receive task will only leave the
+Blocked state when the queue send task writes to the queue.  As the queue send task writes to the queue every 200 milliseconds, the queue receive
+task leaves the Blocked state every 200 milliseconds, and therefore toggles the LED every 200 milliseconds.
  
- The Blinky Software Timer:
- --------------------------
- This demonstrates an auto-reload software timer.  The timer callback function does nothing but toggle an LED.
- 
- The Queue Send Task:
- --------------------------
- The queue send task is implemented by the prvQueueSendTask() function in this file.  prvQueueSendTask() sits in a loop that causes it to repeatedly
- block for 200 milliseconds, before sending the value 100 to the queue that was created within main_blinky().  Once the value is sent, the task loops
- back around to block for another 200 milliseconds. 
- The Queue Receive Task:
- --------------------------
- The queue receive task is implemented by the prvQueueReceiveTask() function in this file.  prvQueueReceiveTask() sits in a loop where it repeatedly
- blocks on attempts to read data from the queue that was created within main_blinky().  When data is received, the task checks the value of the
- data, and if the value equals the expected 100, toggles the LED.  The 'block time' parameter passed to the queue receive function specifies that the
- task should be held in the Blocked state indefinitely to wait for data to be available on the queue.  The queue receive task will only leave the
- Blocked state when the queue send task writes to the queue.  As the queue send task writes to the queue every 200 milliseconds, the queue receive
- task leaves the Blocked state every 200 milliseconds, and therefore toggles the LED every 200 milliseconds.
- 
+=====================================================================================================
+main_full() creates all the demo application tasks and software timers, then starts the scheduler. 
+In addition to the standard demo tasks, the following tasks and tests are defined and/or created within the file:
+
+"LCD" task - the LCD task is a 'gatekeeper' task.  It is the only task that is permitted to access the display directly.  Other tasks wishing to write a message to the LCD 
+send the message on a queue to the LCD task instead of accessing the LCD themselves.  
+The LCD task just blocks on the queue waiting for messages - waking and displaying the messages as they arrive.
+
+
+"Check" timer - The check software timer period is initially set to three seconds.  
+The callback function associated with the check software timer checks that all the standard demo tasks, and the register check tasks, are not only still executing,
+but are executing without reporting any errors.  If the check software timer discovers that a task has either stalled, or reported an error, then it changes its 
+own execution period from the initial three seconds, to just 200ms.  The check software timer callback function also writes a status message to the LCD (via the LCD task).  
+If all the demo tasks are executing with their expected behaviour then the check task writes a count of the number of times the high frequency interrupt has incremented
+ulHighFrequencyTimerInterrupts - which is one in every 20,000 interrupts.
+
+"Register test" tasks - These tasks are used in part to test the kernel port.
+They set each processor register to a known value, then check that the register still contains that value.  Each of the tasks sets the registers
+to different values, and will get swapping in and out between setting and then subsequently checking the register values.  Discovery of an incorrect
+value would be indicative of an error in the task switching mechanism.
+
+configMAX_SYSCALL_INTERRUPT_PRIORITY is 3, configKERNEL_INTERRUPT_PRIORITY is 1, and all other interrupts as follows:
+
++ The UART is allocated a priority of 2. This means it can interrupt the RTOS tick, and can also safely use queues.
+
++ Two timers are configured to generate interrupts just to test the nesting and queue access mechanisms. 
+  These timers are allocated priorities 2 and 3 respectively. Even though they both access the same two queues, the
+  priority 3 interrupt can safely interrupt the priority 2 interrupt. Both can interrupt the RTOS tick.
++ Finally a high frequency timer interrupt is configured to use priority 4 - therefore kernel activity will never prevent 
+  the high frequency timer from executing immediately that the interrupt is raised (within the limitations
+  of the hardware itself). It would not be safe to access a queue from this interrupt as it is above configMAX_SYSCALL_INTERRUPT_PRIORITY.
+
+=====================================================================================================
