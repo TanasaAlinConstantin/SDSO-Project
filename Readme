@@ -1,3 +1,9 @@
 This is a university project and must be take as "it is". 
-Further everything will be in romanian. 
+This project uses a uC with an RTOS functionality. 
+
+
+The project is split in two parts: 
+a simple 'blinky' style starter project
+a more comprehensive test and demo application.
+
 
