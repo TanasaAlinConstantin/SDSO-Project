@@ -31,8 +31,8 @@ task leaves the Blocked state every 200 milliseconds, and therefore toggles the 
 main_full() creates all the demo application tasks and software timers, then starts the scheduler. 
 In addition to the standard demo tasks, the following tasks and tests are defined and/or created within the file:
 
-"LCD" task - the LCD task is a 'gatekeeper' task.  It is the only task that is permitted to access the display directly.  Other tasks wishing to write a message to the LCD 
-send the message on a queue to the LCD task instead of accessing the LCD themselves.  
+"LCD" task - the LCD task is a 'gatekeeper' task.  It is the only task that is permitted to access the display directly.  
+Other tasks wishing to write a message to the LCD send the message on a queue to the LCD task instead of accessing the LCD themselves.  
 The LCD task just blocks on the queue waiting for messages - waking and displaying the messages as they arrive.
 
 
